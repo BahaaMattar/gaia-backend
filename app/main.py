@@ -1,11 +1,21 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import AssessmentRequest, AssessmentResponse
 from .db import Base, engine, get_db
 from .models import Assessment, SymptomEntry, PredictionResult
 
 app = FastAPI(title="GAIA Backend")
+
+# Allow CORS for local development (adjust origins in production)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],          # simplest for local dev
+    allow_credentials=False,      # must be False when allow_origins=["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create tables automatically (simple local-only)
 Base.metadata.create_all(bind=engine)
