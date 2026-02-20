@@ -37,3 +37,19 @@ class PredictionResult(Base):
     recommendation = Column(String, nullable=False)
 
     assessment = relationship("Assessment", back_populates="result")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    age = Column(Integer, nullable=True)
+    gender = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    reset_code_hash = Column(String, nullable=True)
+    reset_expires_at = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
