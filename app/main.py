@@ -1,8 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
+
 from pathlib import Path
 from dotenv import load_dotenv
+
+import joblib
+import numpy as np
+import pandas as pd
+
 import os
 
 from .schemas import (
@@ -35,6 +41,16 @@ ENV_PATH = Path(__file__).resolve().parent.parent / os.getenv("GAIA_ENV_FILE", "
 load_dotenv(ENV_PATH)
 
 app = FastAPI(title="GAIA Backend")
+
+# Load ML models once at startup
+MODEL_PATH = "app/ml-results/"
+model_pipeline = joblib.load(os.path.join(MODEL_PATH, "hybrid_model.pkl"))
+label_encoder = joblib.load(os.path.join(MODEL_PATH, "disease_label_encoder.pkl"))
+selected_symptoms = joblib.load(os.path.join(MODEL_PATH, "selected_symptoms.pkl"))
+
+# Load original feature names (all symptom columns from training data)
+df_training = pd.read_csv('app/Data/Diseases_and_Symptoms_dataset.csv')
+all_symptom_columns = [col for col in df_training.columns if col != 'diseases']
 
 # Allow CORS for local development (adjust origins in production)
 app.add_middleware(
@@ -69,11 +85,35 @@ def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db))
             duration_days=s.duration_days
         ))
 
-    # 3) Dummy result for now (later: ML)
-    risk_level = "Low"
-    probability = 0.2
-    explanation = "Based on the provided symptoms, the risk appears to be low."
-    recommendation = "Monitor your symptoms and consult a doctor if they worsen."
+    # 3) GET ML PREDICTION
+    # Build feature vector matching your training data (all 230 original symptoms)
+    symptom_names = [s.name for s in payload.symptoms]
+    
+    # Create binary feature vector with ALL original symptoms (1 if present, 0 otherwise)
+    feature_vector = np.zeros(len(all_symptom_columns))
+    for i, symptom_col in enumerate(all_symptom_columns):
+        if symptom_col.lower() in [s.lower() for s in symptom_names]:
+            feature_vector[i] = 1
+    
+    # Get probabilities
+    y_probs = model_pipeline.predict_proba([feature_vector])[0]
+    top_3_indices = np.argsort(y_probs)[-3:][::-1]
+    
+    # Get top disease with highest probability
+    top_disease_idx = top_3_indices[0]
+    top_disease = label_encoder.classes_[top_disease_idx]
+    probability = float(y_probs[top_disease_idx])
+    
+    # Categorize risk level
+    if probability > 0.7:
+        risk_level = "High"
+    elif probability > 0.4:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
+    
+    explanation = f"Based on your symptoms, the model predicts: {top_disease} (confidence: {probability:.1%})"
+    recommendation = "Please consult a healthcare professional for accurate diagnosis."
 
     db.add(PredictionResult(
         assessment_id=assessment.id,
