@@ -91,9 +91,27 @@ def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db))
     
     # Create binary feature vector with ALL original symptoms (1 if present, 0 otherwise)
     feature_vector = np.zeros(len(all_symptom_columns))
+    matched_symptoms = []
+    unmatched_symptoms = []
+    
     for i, symptom_col in enumerate(all_symptom_columns):
         if symptom_col.lower() in [s.lower() for s in symptom_names]:
             feature_vector[i] = 1
+            matched_symptoms.append(symptom_col)
+    
+    # Track unmatched symptoms for debugging
+    for symptom in symptom_names:
+        if not any(symptom.lower() == col.lower() for col in all_symptom_columns):
+            unmatched_symptoms.append(symptom)
+    
+    # Debug log
+    print(f"\n=== ML PREDICTION DEBUG ===")
+    print(f"Symptoms received from frontend: {symptom_names}")
+    print(f"Matched symptoms ({len(matched_symptoms)}): {matched_symptoms}")
+    if unmatched_symptoms:
+        print(f"UNMATCHED symptoms ({len(unmatched_symptoms)}): {unmatched_symptoms}")
+    print(f"Feature vector sum: {int(feature_vector.sum())} symptoms active")
+    print(f"=========================\n")
     
     # Get probabilities
     y_probs = model_pipeline.predict_proba([feature_vector])[0]
