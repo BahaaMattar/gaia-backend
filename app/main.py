@@ -16,6 +16,8 @@ from .schemas import (
     AssessmentResponse,
     SignUpRequest,
     LoginRequest,
+    GoogleAuthRequest,
+    GoogleAccessAuthRequest,
     AuthResponse,
     UserResponse,
     UpdateUserRequest,
@@ -35,7 +37,11 @@ from .auth import (
     RESET_CODE_TTL_SECONDS,
 )
 from .email_service import send_email
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+import requests
 import time
+import secrets
 
 ENV_PATH = Path(__file__).resolve().parent.parent / os.getenv("GAIA_ENV_FILE", ".env.local")
 load_dotenv(ENV_PATH)
@@ -68,6 +74,132 @@ ensure_user_columns(engine)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+def _allowed_google_client_ids() -> list[str]:
+    return [
+        value.strip()
+        for value in os.getenv("GAIA_GOOGLE_CLIENT_IDS", "").split(",")
+        if value.strip()
+    ]
+
+
+def _assert_google_audience(audience: str | None):
+    allowed_client_ids = _allowed_google_client_ids()
+    if allowed_client_ids and audience not in allowed_client_ids:
+        raise HTTPException(status_code=401, detail="Google client id is not allowed")
+
+
+def _verify_google_identity(token: str) -> dict:
+    request = google_requests.Request()
+    try:
+        identity = google_id_token.verify_oauth2_token(
+            token,
+            request,
+            audience=None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail="Invalid Google token") from exc
+
+    issuer = identity.get("iss")
+    if issuer not in ("accounts.google.com", "https://accounts.google.com"):
+        raise HTTPException(status_code=401, detail="Invalid Google token issuer")
+
+    _assert_google_audience(identity.get("aud"))
+
+    if not identity.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Google email is not verified")
+
+    if not identity.get("email"):
+        raise HTTPException(status_code=400, detail="Google token missing email")
+
+    return identity
+
+
+def _verify_google_access_identity(access_token: str) -> dict:
+    try:
+        token_info = requests.get(
+            "https://www.googleapis.com/oauth2/v3/tokeninfo",
+            params={"access_token": access_token},
+            timeout=10,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=401, detail="Unable to verify Google access token") from exc
+
+    if token_info.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid Google access token")
+
+    token_info_data = token_info.json()
+    audience = token_info_data.get("aud") or token_info_data.get("azp")
+    _assert_google_audience(audience)
+
+    try:
+        user_info = requests.get(
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=401, detail="Unable to fetch Google profile") from exc
+
+    if user_info.status_code != 200:
+        raise HTTPException(status_code=401, detail="Unable to fetch Google profile")
+
+    identity = user_info.json()
+    if not identity.get("email"):
+        raise HTTPException(status_code=400, detail="Google token missing email")
+    if not identity.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Google email is not verified")
+
+    identity["aud"] = audience
+    return identity
+
+
+def _build_auth_response(user: User) -> dict:
+    token = create_token(user.id)
+    return {
+        "token": token,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "age": user.age,
+            "gender": user.gender,
+            "phone": user.phone,
+            "location": user.location,
+            "created_at": str(user.created_at),
+        },
+    }
+
+
+def _find_or_create_google_user(
+    *,
+    identity: dict,
+    db: Session,
+    age: int | None,
+    gender: str | None,
+    phone: str | None,
+    location: str | None,
+) -> User:
+    email = str(identity["email"]).strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        return user
+
+    display_name = str(identity.get("name") or email.split("@", 1)[0]).strip()
+    user = User(
+        name=display_name[:80] if display_name else "Google User",
+        email=email,
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        age=age,
+        gender=gender,
+        phone=phone.strip() if phone else None,
+        location=location.strip() if location else None,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 @app.post("/assessments", response_model=AssessmentResponse)
 def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db)):
@@ -229,6 +361,37 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "created_at": str(user.created_at),
         },
     }
+
+
+@app.post("/auth/google", response_model=AuthResponse)
+def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    identity = _verify_google_identity(payload.id_token)
+    user = _find_or_create_google_user(
+        identity=identity,
+        db=db,
+        age=payload.age,
+        gender=payload.gender,
+        phone=payload.phone,
+        location=payload.location,
+    )
+    return _build_auth_response(user)
+
+
+@app.post("/auth/google/access", response_model=AuthResponse)
+def google_auth_with_access_token(
+    payload: GoogleAccessAuthRequest,
+    db: Session = Depends(get_db),
+):
+    identity = _verify_google_access_identity(payload.access_token)
+    user = _find_or_create_google_user(
+        identity=identity,
+        db=db,
+        age=payload.age,
+        gender=payload.gender,
+        phone=payload.phone,
+        location=payload.location,
+    )
+    return _build_auth_response(user)
 
 
 @app.get("/auth/me", response_model=UserResponse)
