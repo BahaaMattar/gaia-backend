@@ -249,6 +249,16 @@ def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db))
     y_probs = model_pipeline.predict_proba([feature_vector])[0]
     top_3_indices = np.argsort(y_probs)[-3:][::-1]
     
+    # Get top 3 predictions with their probabilities
+    top_3_predictions = []
+    for idx in top_3_indices:
+        disease_name = label_encoder.classes_[idx]
+        disease_prob = float(y_probs[idx])
+        top_3_predictions.append({
+            "disease": disease_name,
+            "probability": disease_prob
+        })
+    
     # Get top disease with highest probability
     top_disease_idx = top_3_indices[0]
     top_disease = label_encoder.classes_[top_disease_idx]
@@ -280,7 +290,8 @@ def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db))
         "risk_level": risk_level,
         "probability": probability,
         "explanation": explanation,
-        "recommendation": recommendation
+        "recommendation": recommendation,
+        "top_3_predictions": top_3_predictions
     }
 
 
