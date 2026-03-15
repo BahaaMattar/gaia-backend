@@ -36,6 +36,22 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
 
 
+class GoogleAuthRequest(BaseModel):
+    id_token: str = Field(..., min_length=20, max_length=4096)
+    age: Optional[int] = Field(None, ge=0, le=120)
+    gender: Optional[Gender] = None
+    phone: Optional[str] = Field(None, max_length=30)
+    location: Optional[str] = Field(None, max_length=80)
+
+
+class GoogleAccessAuthRequest(BaseModel):
+    access_token: str = Field(..., min_length=20, max_length=4096)
+    age: Optional[int] = Field(None, ge=0, le=120)
+    gender: Optional[Gender] = None
+    phone: Optional[str] = Field(None, max_length=30)
+    location: Optional[str] = Field(None, max_length=80)
+
+
 class UserResponse(BaseModel):
     id: int
     name: str
