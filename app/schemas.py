@@ -14,11 +14,16 @@ class AssessmentRequest(BaseModel):
     gender: Gender
     symptoms: List[Symptom] = Field(..., min_length=1)
 
+class Prediction(BaseModel):
+    disease: str
+    probability: float = Field(..., ge=0.0, le=1.0)
+
 class AssessmentResponse(BaseModel):
     risk_level: RiskLevel
     probability: float = Field(..., ge=0.0, le=1.0)
     explanation: str
     recommendation: str
+    top_3_predictions: List[Prediction] = Field(..., min_items=1, max_items=3)
 
 
 class SignUpRequest(BaseModel):
