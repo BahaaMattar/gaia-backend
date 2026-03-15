@@ -37,6 +37,7 @@ from .auth import (
     RESET_CODE_TTL_SECONDS,
 )
 from .email_service import send_email
+from app.dependencies import get_user_from_header
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 import requests
@@ -47,6 +48,10 @@ ENV_PATH = Path(__file__).resolve().parent.parent / os.getenv("GAIA_ENV_FILE", "
 load_dotenv(ENV_PATH)
 
 app = FastAPI(title="GAIA Backend")
+
+# Include routers
+from app.routers.admin_router import router as admin_router
+app.include_router(admin_router)
 
 # Load ML models once at startup
 MODEL_PATH = "app/ml-results/"
@@ -168,6 +173,8 @@ def _build_auth_response(user: User) -> dict:
             "phone": user.phone,
             "location": user.location,
             "created_at": str(user.created_at),
+            "role": user.role,
+            "is_active": user.is_active,
         },
     }
 
@@ -284,26 +291,6 @@ def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db))
     }
 
 
-def _get_user_from_header(
-    authorization: str | None = Header(default=None),
-    db: Session = Depends(get_db),
-):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid auth header")
-
-    token = authorization.split(" ", 1)[1].strip()
-    payload = decode_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    user_id = payload.get("sub")
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid token subject")
-
-    return user
-
-
 @app.post("/auth/signup", response_model=AuthResponse)
 def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
     email = payload.email.strip().lower()
@@ -319,6 +306,8 @@ def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
         gender=payload.gender,
         phone=payload.phone.strip() if payload.phone else None,
         location=payload.location.strip() if payload.location else None,
+        role="user",
+        is_active=True,
     )
     db.add(user)
     db.commit()
@@ -336,6 +325,8 @@ def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
             "phone": user.phone,
             "location": user.location,
             "created_at": str(user.created_at),
+            "role": user.role,
+            "is_active": user.is_active,
         },
     }
 
@@ -347,6 +338,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is inactive. Please contact admin.")
     token = create_token(user.id)
     return {
         "token": token,
@@ -359,6 +352,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "phone": user.phone,
             "location": user.location,
             "created_at": str(user.created_at),
+            "role": user.role,
+            "is_active": user.is_active,
         },
     }
 
@@ -395,7 +390,7 @@ def google_auth_with_access_token(
 
 
 @app.get("/auth/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(_get_user_from_header)):
+def get_me(current_user: User = Depends(get_user_from_header)):
     return {
         "id": current_user.id,
         "name": current_user.name,
@@ -405,6 +400,8 @@ def get_me(current_user: User = Depends(_get_user_from_header)):
         "phone": current_user.phone,
         "location": current_user.location,
         "created_at": str(current_user.created_at),
+        "role": current_user.role,
+        "is_active": current_user.is_active,
     }
 
 
@@ -412,7 +409,7 @@ def get_me(current_user: User = Depends(_get_user_from_header)):
 def update_me(
     payload: UpdateUserRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_user_from_header),
+    current_user: User = Depends(get_user_from_header),
 ):
     if payload.email:
         email = payload.email.strip().lower()
@@ -455,6 +452,8 @@ def update_me(
         "phone": current_user.phone,
         "location": current_user.location,
         "created_at": str(current_user.created_at),
+        "role": current_user.role,
+        "is_active": current_user.is_active,
     }
 
 

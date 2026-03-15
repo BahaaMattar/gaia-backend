@@ -61,6 +61,8 @@ class UserResponse(BaseModel):
     phone: Optional[str] = None
     location: Optional[str] = None
     created_at: Optional[str] = None
+    role: str
+    is_active: bool
 
 
 class AuthResponse(BaseModel):
@@ -76,6 +78,37 @@ class UpdateUserRequest(BaseModel):
     gender: Optional[Gender] = None
     phone: Optional[str] = Field(None, max_length=30)
     location: Optional[str] = Field(None, max_length=80)
+
+
+# Admin dashboard summary response
+class AdminDashboardSummary(BaseModel):
+    total_users: int
+    total_doctors: int
+    active_doctors: int
+    total_assessments: int
+
+# Create doctor request
+class CreateDoctorRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=80)
+    email: str = Field(..., min_length=5, max_length=254)
+    password: str = Field(..., min_length=8, max_length=128)
+    phone: Optional[str] = Field(None, max_length=30)
+    location: Optional[str] = Field(None, max_length=80)
+
+# Doctor list item response
+class DoctorListItem(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    role: str
+    is_active: bool
+    created_at: Optional[str] = None
+
+# Update doctor status request
+class UpdateDoctorStatusRequest(BaseModel):
+    is_active: bool
 
 
 class ForgotPasswordRequest(BaseModel):

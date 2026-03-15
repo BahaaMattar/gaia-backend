@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from .db import Base
@@ -53,3 +53,5 @@ class User(Base):
     reset_code_hash = Column(String, nullable=True)
     reset_expires_at = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    role = Column(String, nullable=False, default="user")
+    is_active = Column(Boolean, nullable=False, default=True)

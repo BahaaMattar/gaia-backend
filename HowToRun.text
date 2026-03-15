@@ -1,0 +1,15 @@
+How to Run the GAIA Backend (FastAPI)
+
+1. Activate your Python virtual environment:
+	PowerShell:
+	& "c:\RHU\Spring 2026(6th semester)\FYP\gaia-backend\.env\Scripts\Activate.ps1"
+	(or use .\.venv\Scripts\Activate.ps1 if your environment is named .venv)
+
+2. Install dependencies:
+	pip install -r requirements.txt
+
+3. Start the FastAPI server:
+	uvicorn app.main:app --reload
+
+The API will be available at http://127.0.0.1:8000
+Interactive docs: http://127.0.0.1:8000/docs

@@ -37,8 +37,16 @@ def ensure_user_columns(engine):
             "location": "TEXT",
             "reset_code_hash": "TEXT",
             "reset_expires_at": "INTEGER",
+            "role": "TEXT NOT NULL DEFAULT 'user'",
+            "is_active": "BOOLEAN NOT NULL DEFAULT 1",
         }
 
         for name, ddl_type in columns.items():
             if name not in existing:
                 conn.exec_driver_sql(f"ALTER TABLE users ADD COLUMN {name} {ddl_type}")
+
+        # Backfill existing rows for new columns
+        if "role" in existing:
+            conn.exec_driver_sql("UPDATE users SET role = 'user' WHERE role IS NULL")
+        if "is_active" in existing:
+            conn.exec_driver_sql("UPDATE users SET is_active = 1 WHERE is_active IS NULL")
