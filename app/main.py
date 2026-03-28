@@ -63,6 +63,10 @@ selected_symptoms = joblib.load(os.path.join(MODEL_PATH, "selected_symptoms.pkl"
 df_training = pd.read_csv('app/Data/Diseases_and_Symptoms_dataset.csv')
 all_symptom_columns = [col for col in df_training.columns if col != 'diseases']
 
+risk_df = pd.read_csv('app/Data/disease_risk_mapping.csv') 
+# Convert the two columns into a fast lookup dictionary: {'disease_name': 'Risk_Level'}
+DISEASE_RISK_MAP = dict(zip(risk_df['disease'], risk_df['risk_level']))
+
 # Allow CORS for local development (adjust origins in production)
 app.add_middleware(
     CORSMiddleware,
@@ -271,16 +275,55 @@ def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db))
     top_disease = label_encoder.classes_[top_disease_idx]
     probability = float(y_probs[top_disease_idx])
     
-    # Categorize risk level
-    if probability > 0.7:
-        risk_level = "High"
-    elif probability > 0.4:
-        risk_level = "Medium"
-    else:
-        risk_level = "Low"
+    # Top 3 Risk Scanning Logic
+    risk_level = "Low"
+    recommendation = "Monitor your symptoms and rest. If symptoms worsen, consult a doctor."
     
-    explanation = f"Based on your symptoms, the model predicts: {top_disease} (confidence: {probability:.1%})"
-    recommendation = "Please consult a healthcare professional for accurate diagnosis."
+    # NEW: Explicitly track the disease causing the highest concern
+    primary_concern = top_3_predictions[0]['disease'] 
+    
+    # Iterate through the top 3 predictions
+    for pred in top_3_predictions:
+        d_name = pred['disease']
+        prob = pred['probability']
+        
+        safe_name = d_name.lower().strip()
+        disease_risk = DISEASE_RISK_MAP.get(safe_name, "Medium")
+        
+        # 1. Critical Check
+        if disease_risk in ["High", "Critical"] and prob > 0.05:
+            risk_level = disease_risk
+            primary_concern = d_name  # Capture the specific high-risk disease
+            
+            if d_name == top_3_predictions[0]['disease']:
+                recommendation = f"URGENT: You are showing signs of {d_name}. Please seek immediate medical attention."
+            else:
+                recommendation = f"URGENT: While {top_3_predictions[0]['disease']} is most likely, there is a risk of {d_name}. Please seek immediate medical attention."
+            break  # Stop checking, we found the highest risk
+            
+        # 2. Medium Check
+        elif disease_risk == "Medium" and risk_level == "Low" and prob > 0.10:
+            risk_level = "Medium"
+            primary_concern = d_name  # Capture the medium-risk disease
+            recommendation = "Please consult a healthcare professional for an accurate diagnosis."
+
+    # --- Age-Based Risk Modifier ---
+    user_age = payload.age 
+
+    if user_age > 60:
+        if risk_level == "Low":
+            risk_level = "Medium"
+            recommendation = "Given your age, we recommend consulting a doctor to be safe, even for mild symptoms."
+            
+        elif risk_level == "Medium":
+            risk_level = "High"
+            recommendation = f"URGENT: Due to your age and the risk of {primary_concern}, please seek medical attention promptly."
+            
+        elif risk_level in ["High", "Critical"]:
+            recommendation = f"CRITICAL: Immediate emergency medical care is strongly advised for signs of {primary_concern}."
+
+    # Keep original explanation variable
+    explanation = f"Based on your symptoms, the model predicts: {top_3_predictions[0]['disease']} (confidence: {top_3_predictions[0]['probability']:.1%})"
 
     db.add(PredictionResult(
         assessment_id=assessment.id,

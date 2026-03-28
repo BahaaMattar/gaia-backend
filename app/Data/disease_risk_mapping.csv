@@ -1,0 +1,101 @@
+disease,risk_level
+panic disorder,Low
+vaginitis,Low
+problem during pregnancy,High
+acute pancreatitis,High
+asthma,Medium
+infectious gastroenteritis,Medium
+acute sinusitis,Medium
+cornea infection,Medium
+marijuana abuse,Medium
+bursitis,Low
+actinic keratosis,Low
+chronic obstructive pulmonary disease (copd),Medium
+spondylosis,Medium
+injury to the arm,Medium
+complex regional pain syndrome,Medium
+injury to the trunk,Medium
+vulvodynia,Medium
+concussion,Medium
+hypoglycemia,High
+hiatal hernia,Low
+allergy,Low
+acute bronchospasm,High
+degenerative disc disease,Medium
+pain after an operation,Medium
+injury to the leg,Medium
+gout,Medium
+otitis media,Medium
+acute kidney injury,High
+threatened pregnancy,High
+gum disease,Low
+gastrointestinal hemorrhage,High
+anxiety,Low
+conjunctivitis due to allergy,Low
+drug reaction,High
+macular degeneration,Low
+pneumonia,High
+vaginal cyst,Low
+carpal tunnel syndrome,Low
+nose disorder,Low
+dental caries,Low
+hypertensive heart disease,Medium
+seasonal allergies (hay fever),Low
+fungal infection of the hair,Low
+rectal disorder,Medium
+stye,Low
+heart attack,High
+obstructive sleep apnea (osa),Medium
+psoriasis,Low
+arthritis of the hip,Medium
+sickle cell crisis,High
+otitis externa (swimmer's ear),Low
+acute bronchiolitis,Medium
+pyogenic skin infection,Low
+noninfectious gastroenteritis,Medium
+benign prostatic hyperplasia (bph),Medium
+spinal stenosis,Medium
+acute bronchitis,Medium
+croup,Medium
+idiopathic excessive menstruation,Low
+ear drum damage,Low
+temporary or benign blood in urine,Low
+common cold,Low
+depression,Medium
+idiopathic irregular menstrual cycle,Medium
+schizophrenia,Medium
+sepsis,High
+cholecystitis,High
+cystitis,Low
+hemorrhoids,Low
+contact dermatitis,Low
+sinus bradycardia,Medium
+pelvic inflammatory disease,Medium
+liver disease,Medium
+chronic constipation,Low
+skin polyp,Low
+brachial neuritis,Medium
+esophagitis,Medium
+diverticulitis,Medium
+sprain or strain,Low
+idiopathic painful menstruation,Low
+eustachian tube dysfunction (ear disorder),Low
+appendicitis,High
+hyperemesis gravidarum,Medium
+urinary tract infection,Low
+peripheral nerve disorder,Medium
+sebaceous cyst,Low
+spontaneous abortion,Medium
+gallstone,Medium
+multiple sclerosis,Medium
+angina,High
+skin pigmentation disorder,Low
+personality disorder,Medium
+strep throat,Medium
+developmental disability,Medium
+chronic back pain,Medium
+heart failure,High
+conjunctivitis,Low
+herniated disk,Medium
+diaper rash,Low
+eczema,Low
