@@ -23,9 +23,10 @@ from .schemas import (
     UpdateUserRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    StepSyncRequest,
 )
 from .db import Base, engine, get_db
-from .models import Assessment, SymptomEntry, PredictionResult, User
+from .models import Assessment, SymptomEntry, PredictionResult, User, StepRecord
 from .auth import (
     hash_password,
     verify_password,
@@ -588,3 +589,19 @@ def get_assessment(assessment_id: int, db: Session = Depends(get_db)):
             "recommendation": result.recommendation
         }
     }
+
+@app.post("/steps/sync")
+def sync_steps(
+    payload: StepSyncRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_header)
+):
+    # Save the new step count to the database
+    new_record = StepRecord(
+        user_id=current_user.id,
+        steps=payload.steps
+    )
+    db.add(new_record)
+    db.commit()
+    
+    return {"status": "success", "recorded_steps": payload.steps}

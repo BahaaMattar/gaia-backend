@@ -56,3 +56,11 @@ class User(Base):
     role = Column(String, nullable=False, default="user")
     is_active = Column(Boolean, nullable=False, default=True)
     specialty = Column(String, nullable=True)
+
+class StepRecord(Base):
+    __tablename__ = "step_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    steps = Column(Integer, nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
