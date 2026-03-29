@@ -24,7 +24,7 @@ from .schemas import (
     ForgotPasswordRequest,
     ResetPasswordRequest,
 )
-from .db import Base, engine, get_db, ensure_user_columns
+from .db import Base, engine, get_db
 from .models import Assessment, SymptomEntry, PredictionResult, User
 from .auth import (
     hash_password,
@@ -76,9 +76,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create tables automatically (simple local-only)
+# Create tables automatically
 Base.metadata.create_all(bind=engine)
-ensure_user_columns(engine)
 
 @app.get("/health")
 def health_check():

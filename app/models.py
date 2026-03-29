@@ -55,3 +55,4 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     role = Column(String, nullable=False, default="user")
     is_active = Column(Boolean, nullable=False, default=True)
+    specialty = Column(String, nullable=True)

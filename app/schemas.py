@@ -92,14 +92,6 @@ class AdminDashboardSummary(BaseModel):
     active_doctors: int
     total_assessments: int
 
-# Create doctor request
-class CreateDoctorRequest(BaseModel):
-    name: str = Field(..., min_length=2, max_length=80)
-    email: str = Field(..., min_length=5, max_length=254)
-    password: str = Field(..., min_length=8, max_length=128)
-    phone: Optional[str] = Field(None, max_length=30)
-    location: Optional[str] = Field(None, max_length=80)
-
 # Doctor list item response
 class DoctorListItem(BaseModel):
     id: int
@@ -110,10 +102,39 @@ class DoctorListItem(BaseModel):
     role: str
     is_active: bool
     created_at: Optional[str] = None
+    specialty: Optional[str] = None
 
 # Update doctor status request
 class UpdateDoctorStatusRequest(BaseModel):
     is_active: bool
+
+# Full user list item (for admin user management)
+class UserListItem(BaseModel):
+    id: int
+    name: str
+    email: str
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    role: str
+    is_active: bool
+    created_at: Optional[str] = None
+    specialty: Optional[str] = None
+
+# Create any user with a chosen role
+class CreateUserAdminRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=80)
+    email: str = Field(..., min_length=5, max_length=254)
+    password: str = Field(..., min_length=8, max_length=128)
+    role: Literal["user", "doctor", "admin"] = "user"
+    phone: Optional[str] = Field(None, max_length=30)
+    location: Optional[str] = Field(None, max_length=80)
+    specialty: Optional[str] = Field(None, max_length=100)
+
+# Change any user's role
+class UpdateUserRoleRequest(BaseModel):
+    role: Literal["user", "doctor", "admin"]
 
 
 class ForgotPasswordRequest(BaseModel):
