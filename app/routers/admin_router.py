@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -47,15 +48,33 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 @router.get("/dashboard-summary", response_model=AdminDashboardSummary)
 def admin_dashboard_summary(db: Session = Depends(get_db), admin: User = Depends(require_admin)):
-    total_users = db.query(User).count()
-    total_doctors = db.query(User).filter(User.role == "doctor").count()
+    total_users    = db.query(User).filter(User.role == "user").count()
+    inactive_users = db.query(User).filter(User.role == "user",   User.is_active == False).count()
+    total_doctors  = db.query(User).filter(User.role == "doctor").count()
     active_doctors = db.query(User).filter(User.role == "doctor", User.is_active == True).count()
+    inactive_doctors = total_doctors - active_doctors
+    total_admins   = db.query(User).filter(User.role == "admin").count()
     total_assessments = db.query(Assessment).count()
+
+    today_utc    = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago_utc = datetime.now(timezone.utc) - timedelta(days=7)
+
+    assessments_today  = db.query(Assessment).filter(Assessment.created_at >= today_utc).count()
+    new_users_this_week = db.query(User).filter(
+        User.created_at >= week_ago_utc,
+        User.role == "user",
+    ).count()
+
     return AdminDashboardSummary(
         total_users=total_users,
+        inactive_users=inactive_users,
         total_doctors=total_doctors,
         active_doctors=active_doctors,
+        inactive_doctors=inactive_doctors,
+        total_admins=total_admins,
         total_assessments=total_assessments,
+        assessments_today=assessments_today,
+        new_users_this_week=new_users_this_week,
     )
 
 
@@ -135,7 +154,7 @@ def admin_list_doctors(db: Session = Depends(get_db), admin: User = Depends(requ
         DoctorListItem(
             id=d.id, name=d.name, email=d.email, phone=d.phone,
             location=d.location, role=d.role, is_active=d.is_active,
-            created_at=str(d.created_at),
+            created_at=str(d.created_at), specialty=d.specialty,
         ) for d in doctors
     ]
 

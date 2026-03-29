@@ -88,9 +88,14 @@ class UpdateUserRequest(BaseModel):
 # Admin dashboard summary response
 class AdminDashboardSummary(BaseModel):
     total_users: int
+    inactive_users: int
     total_doctors: int
     active_doctors: int
+    inactive_doctors: int
+    total_admins: int
     total_assessments: int
+    assessments_today: int
+    new_users_this_week: int
 
 # Doctor list item response
 class DoctorListItem(BaseModel):
