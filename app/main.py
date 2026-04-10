@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import date
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -596,12 +597,28 @@ def sync_steps(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_user_from_header)
 ):
-    # Save the new step count to the database
-    new_record = StepRecord(
-        user_id=current_user.id,
-        steps=payload.steps
-    )
-    db.add(new_record)
-    db.commit()
+    today = date.today()
     
-    return {"status": "success", "recorded_steps": payload.steps}
+    # Try to find existing record for today
+    existing_record = db.query(StepRecord).filter(
+        StepRecord.user_id == current_user.id,
+        StepRecord.record_date == today
+    ).first()
+    
+    if existing_record:
+        # Update existing record with new step count
+        existing_record.steps = payload.steps
+        db.commit()
+        db.refresh(existing_record)
+        return {"status": "success", "recorded_steps": payload.steps, "record_id": existing_record.id, "action": "updated"}
+    else:
+        # Create new record for today
+        new_record = StepRecord(
+            user_id=current_user.id,
+            steps=payload.steps,
+            record_date=today
+        )
+        db.add(new_record)
+        db.commit()
+        db.refresh(new_record)
+        return {"status": "success", "recorded_steps": payload.steps, "record_id": new_record.id, "action": "created"}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from .db import Base
@@ -63,4 +63,4 @@ class StepRecord(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     steps = Column(Integer, nullable=False)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    record_date = Column(Date, server_default=func.current_date())
