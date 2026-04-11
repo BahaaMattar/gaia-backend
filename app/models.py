@@ -64,3 +64,12 @@ class StepRecord(Base):
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     steps = Column(Integer, nullable=False)
     record_date = Column(Date, server_default=func.current_date())
+
+
+class WaterRecord(Base):
+    __tablename__ = "water_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    intake_ml = Column(Integer, nullable=False)
+    record_date = Column(Date, server_default=func.current_date())

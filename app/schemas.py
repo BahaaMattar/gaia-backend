@@ -153,3 +153,6 @@ class ResetPasswordRequest(BaseModel):
 
 class StepSyncRequest(BaseModel):
     steps: int
+
+class WaterSyncRequest(BaseModel):
+    intake_ml: int

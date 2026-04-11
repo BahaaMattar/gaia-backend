@@ -25,9 +25,10 @@ from .schemas import (
     ForgotPasswordRequest,
     ResetPasswordRequest,
     StepSyncRequest,
+    WaterSyncRequest,
 )
 from .db import Base, engine, get_db
-from .models import Assessment, SymptomEntry, PredictionResult, User, StepRecord
+from .models import Assessment, SymptomEntry, PredictionResult, User, StepRecord, WaterRecord
 from .auth import (
     hash_password,
     verify_password,
@@ -622,3 +623,95 @@ def sync_steps(
         db.commit()
         db.refresh(new_record)
         return {"status": "success", "recorded_steps": payload.steps, "record_id": new_record.id, "action": "created"}
+
+
+@app.get("/steps/history")
+def get_steps_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_header)
+):
+    """Fetch all step records for the current user, sorted by date descending"""
+    records = db.query(StepRecord).filter(
+        StepRecord.user_id == current_user.id
+    ).order_by(StepRecord.record_date.desc()).all()
+    
+    return {
+        "status": "success",
+        "records": [
+            {
+                "id": record.id,
+                "steps": record.steps,
+                "record_date": record.record_date.isoformat()
+            }
+            for record in records
+        ]
+    }
+
+
+@app.get("/steps/today")
+def get_today_steps(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_header)
+):
+    """Fetch today's step record for the current user"""
+    today = date.today()
+    record = db.query(StepRecord).filter(
+        StepRecord.user_id == current_user.id,
+        StepRecord.record_date == today
+    ).first()
+    
+    if record:
+        return {
+            "status": "success",
+            "steps": record.steps,
+            "record_date": record.record_date.isoformat()
+        }
+    else:
+        return {
+            "status": "success",
+            "steps": 0,
+            "record_date": today.isoformat()
+        }
+    
+@app.get("/water/today")
+def get_today_water(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_header)
+):
+    """Fetch today's water record for the current user"""
+    today = date.today()
+    record = db.query(WaterRecord).filter(
+        WaterRecord.user_id == current_user.id,
+        WaterRecord.record_date == today
+    ).first()
+    
+    return {"status": "success", "intake_ml": record.intake_ml if record else 0}
+
+
+@app.post("/water/sync")
+def sync_water(
+    payload: WaterSyncRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_header)
+):
+    """Update or create today's water record"""
+    today = date.today()
+    record = db.query(WaterRecord).filter(
+        WaterRecord.user_id == current_user.id,
+        WaterRecord.record_date == today
+    ).first()
+
+    if record:
+        record.intake_ml = payload.intake_ml
+        action = "updated"
+    else:
+        record = WaterRecord(
+            user_id=current_user.id, 
+            intake_ml=payload.intake_ml, 
+            record_date=today
+        )
+        db.add(record)
+        action = "created"
+
+    db.commit()
+    return {"status": "success", "intake_ml": record.intake_ml, "action": action}
