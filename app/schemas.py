@@ -65,9 +65,12 @@ class UserResponse(BaseModel):
     gender: Optional[Gender] = None
     phone: Optional[str] = None
     location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     created_at: Optional[str] = None
     role: str
     is_active: bool
+    specialty: Optional[str] = None
 
 
 class AuthResponse(BaseModel):
@@ -83,6 +86,8 @@ class UpdateUserRequest(BaseModel):
     gender: Optional[Gender] = None
     phone: Optional[str] = Field(None, max_length=30)
     location: Optional[str] = Field(None, max_length=80)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 # Admin dashboard summary response
@@ -136,6 +141,8 @@ class CreateUserAdminRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=30)
     location: Optional[str] = Field(None, max_length=80)
     specialty: Optional[str] = Field(None, max_length=100)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 # Change any user's role
 class UpdateUserRoleRequest(BaseModel):
@@ -156,3 +163,51 @@ class StepSyncRequest(BaseModel):
 
 class WaterSyncRequest(BaseModel):
     intake_ml: int
+
+
+# ── Nearby doctor search ──────────────────────────────────────────────────────
+
+class NearbyDoctorResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone: Optional[str] = None
+    specialty: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    distance_km: float
+    is_active: bool
+
+
+# ── Appointments ──────────────────────────────────────────────────────────────
+
+class AppointmentCreate(BaseModel):
+    doctor_id: int
+    condition: Optional[str] = None
+
+
+class AppointmentResponse(BaseModel):
+    id: int
+    user_id: int
+    doctor_id: int
+    condition: Optional[str] = None
+    status: str
+    created_at: Optional[str] = None
+    user_name: Optional[str] = None
+    doctor_name: Optional[str] = None
+    doctor_specialty: Optional[str] = None
+
+
+# ── Messages ──────────────────────────────────────────────────────────────────
+
+class MessageCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+
+class MessageResponse(BaseModel):
+    id: int
+    appointment_id: int
+    sender_id: int
+    sender_name: str
+    content: str
+    created_at: Optional[str] = None

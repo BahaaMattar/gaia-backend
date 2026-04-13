@@ -1,7 +1,6 @@
 """
 Seed script for GAIA dummy doctors across Lebanon.
-Adds specialty column if missing, then inserts doctors.
-Coordinates are stored as "lat, lng" in the location field.
+Runs column migrations then inserts doctors with proper lat/lng float columns.
 Usage: python seed_doctors.py
 """
 
@@ -12,9 +11,22 @@ from sqlalchemy import text
 
 
 def run_migrations():
+    """Add any missing columns to the users table."""
     with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty TEXT"))
-    print("Migration OK: specialty column ensured.")
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty  TEXT"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude   DOUBLE PRECISION"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude  DOUBLE PRECISION"))
+        # Back-fill lat/lng for any doctors already seeded with "lat, lng" in location
+        conn.execute(text("""
+            UPDATE users
+            SET
+                latitude  = SPLIT_PART(location, ',', 1)::DOUBLE PRECISION,
+                longitude = SPLIT_PART(location, ',', 2)::DOUBLE PRECISION
+            WHERE role = 'doctor'
+              AND location ~ '^\\s*-?\\d+(\\.\\d+)?\\s*,\\s*-?\\d+(\\.\\d+)?\\s*$'
+              AND latitude IS NULL
+        """))
+    print("Migration OK: specialty / latitude / longitude columns ensured and back-filled.")
 
 
 # Format: (name, email, specialty, phone, lat, lng)
@@ -110,7 +122,9 @@ def seed_doctors():
                 is_active=True,
                 specialty=specialty,
                 phone=phone,
-                location=f"{lat}, {lng}",
+                location=f"{lat}, {lng}",   # kept for display / fallback geocoding
+                latitude=lat,
+                longitude=lng,
             )
             db.add(doctor)
             created += 1

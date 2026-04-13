@@ -100,6 +100,8 @@ def admin_create_user(payload: CreateUserAdminRequest, db: Session = Depends(get
         role=payload.role,
         is_active=True,
         specialty=payload.specialty,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
     )
     db.add(user)
     db.commit()

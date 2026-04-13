@@ -52,9 +52,24 @@ load_dotenv(ENV_PATH)
 
 app = FastAPI(title="GAIA Backend")
 
+
+def _parse_location_coords(location: str | None) -> tuple[float | None, float | None]:
+    """Parse a 'lat, lng' string into float pair. Returns (None, None) on failure."""
+    if not location:
+        return None, None
+    parts = location.split(",")
+    if len(parts) != 2:
+        return None, None
+    try:
+        return float(parts[0].strip()), float(parts[1].strip())
+    except ValueError:
+        return None, None
+
 # Include routers
 from app.routers.admin_router import router as admin_router
+from app.routers.doctor_router import router as doctor_router
 app.include_router(admin_router)
+app.include_router(doctor_router)
 
 # Load ML models once at startup
 MODEL_PATH = "app/ml-results/"
@@ -178,6 +193,8 @@ def _build_auth_response(user: User) -> dict:
             "gender": user.gender,
             "phone": user.phone,
             "location": user.location,
+            "latitude": user.latitude,
+            "longitude": user.longitude,
             "created_at": str(user.created_at),
             "role": user.role,
             "is_active": user.is_active,
@@ -354,6 +371,9 @@ def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
 
+    loc = payload.location.strip() if payload.location else None
+    lat, lng = _parse_location_coords(loc)
+
     user = User(
         name=payload.name.strip(),
         email=email,
@@ -361,7 +381,9 @@ def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
         age=payload.age,
         gender=payload.gender,
         phone=payload.phone.strip() if payload.phone else None,
-        location=payload.location.strip() if payload.location else None,
+        location=loc,
+        latitude=lat,
+        longitude=lng,
         role="user",
         is_active=True,
     )
@@ -380,6 +402,8 @@ def signup(payload: SignUpRequest, db: Session = Depends(get_db)):
             "gender": user.gender,
             "phone": user.phone,
             "location": user.location,
+            "latitude": user.latitude,
+            "longitude": user.longitude,
             "created_at": str(user.created_at),
             "role": user.role,
             "is_active": user.is_active,
@@ -455,9 +479,12 @@ def get_me(current_user: User = Depends(get_user_from_header)):
         "gender": current_user.gender,
         "phone": current_user.phone,
         "location": current_user.location,
+        "latitude": current_user.latitude,
+        "longitude": current_user.longitude,
         "created_at": str(current_user.created_at),
         "role": current_user.role,
         "is_active": current_user.is_active,
+        "specialty": current_user.specialty,
     }
 
 
@@ -495,6 +522,15 @@ def update_me(
 
     if payload.location is not None:
         current_user.location = payload.location.strip() if payload.location else None
+        lat, lng = _parse_location_coords(current_user.location)
+        current_user.latitude = lat
+        current_user.longitude = lng
+
+    # Allow explicit float overrides (sent directly from GPS on the device)
+    if payload.latitude is not None:
+        current_user.latitude = payload.latitude
+    if payload.longitude is not None:
+        current_user.longitude = payload.longitude
 
     db.commit()
     db.refresh(current_user)
@@ -507,9 +543,12 @@ def update_me(
         "gender": current_user.gender,
         "phone": current_user.phone,
         "location": current_user.location,
+        "latitude": current_user.latitude,
+        "longitude": current_user.longitude,
         "created_at": str(current_user.created_at),
         "role": current_user.role,
         "is_active": current_user.is_active,
+        "specialty": current_user.specialty,
     }
 
 
