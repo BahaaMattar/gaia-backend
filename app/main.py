@@ -727,6 +727,29 @@ def get_today_water(
     return {"status": "success", "intake_ml": record.intake_ml if record else 0}
 
 
+@app.get("/water/history")
+def get_water_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_header)
+):
+    """Fetch all water records for the current user, sorted by date descending"""
+    records = db.query(WaterRecord).filter(
+        WaterRecord.user_id == current_user.id
+    ).order_by(WaterRecord.record_date.desc()).all()
+
+    return {
+        "status": "success",
+        "records": [
+            {
+                "id": record.id,
+                "intake_ml": record.intake_ml,
+                "record_date": record.record_date.isoformat()
+            }
+            for record in records
+        ]
+    }
+
+
 @app.post("/water/sync")
 def sync_water(
     payload: WaterSyncRequest,
