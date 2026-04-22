@@ -68,8 +68,10 @@ def _parse_location_coords(location: str | None) -> tuple[float | None, float | 
 # Include routers
 from app.routers.admin_router import router as admin_router
 from app.routers.doctor_router import router as doctor_router
+from app.routers.contact_router import router as contact_router
 app.include_router(admin_router)
 app.include_router(doctor_router)
+app.include_router(contact_router)
 
 # Load ML models once at startup
 MODEL_PATH = "app/ml-results/"

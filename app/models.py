@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Boolean, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from .db import Base
@@ -103,3 +103,29 @@ class Message(Base):
 
     appointment = relationship("Appointment", back_populates="messages")
     sender = relationship("User", foreign_keys=[sender_id])
+
+
+class ContactThread(Base):
+    __tablename__ = "contact_threads"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status     = Column(String, nullable=False, default="open")  # "open" | "closed"
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user     = relationship("User", foreign_keys=[user_id])
+    messages = relationship("ContactMessage", back_populates="thread",
+                            cascade="all, delete-orphan", order_by="ContactMessage.created_at")
+
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    thread_id   = Column(Integer, ForeignKey("contact_threads.id"), nullable=False, index=True)
+    sender_type = Column(String, nullable=False)  # "user" | "admin"
+    content     = Column(Text, nullable=False)
+    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+
+    thread = relationship("ContactThread", back_populates="messages")

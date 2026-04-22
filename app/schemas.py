@@ -211,3 +211,36 @@ class MessageResponse(BaseModel):
     sender_name: str
     content: str
     created_at: Optional[str] = None
+
+
+# ── Contact / Support Chat ────────────────────────────────────────────────────
+
+class ContactMessageIn(BaseModel):
+    content: str = Field(..., min_length=1, max_length=1000)
+
+
+class ContactMessageOut(BaseModel):
+    id: int
+    sender_type: str  # "user" | "admin"
+    content: str
+    created_at: Optional[str] = None
+
+
+class ContactThreadOut(BaseModel):
+    id: int
+    status: str  # "open" | "closed"
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    messages: List[ContactMessageOut] = []
+
+
+class ContactThreadSummary(BaseModel):
+    id: int
+    status: str
+    user_id: int
+    user_name: str
+    user_email: str
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    message_count: int
+    last_message: Optional[str] = None
