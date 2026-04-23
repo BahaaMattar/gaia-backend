@@ -177,6 +177,7 @@ class NearbyDoctorResponse(BaseModel):
     longitude: Optional[float] = None
     distance_km: float
     is_active: bool
+    is_specialty_match: bool = False
 
 
 # ── Appointments ──────────────────────────────────────────────────────────────

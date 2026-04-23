@@ -20,6 +20,7 @@ router = APIRouter(tags=["Doctors & Appointments"])
 # ── Disease → Specialty mapping ───────────────────────────────────────────────
 
 _KEYWORD_SPECIALTY: list[tuple[list[str], str]] = [
+    (["cold", "flu", "influenza", "fever", "cough", "runny", "congestion", "sneez", "strep", "sore throat", "body ache", "chills", "malaise", "fatigue", "tired", "weakness", "upper respiratory", "rhinit"], "General Practitioner / Family Medicine"),
     (["heart", "cardiac", "hypertension", "blood pressure", "coronary", "arrhythmia"], "Cardiologist"),
     (["lung", "pulmonary", "asthma", "bronchitis", "pneumonia", "copd", "tuberculosis", "respiratory", "wheez", "sleep apnea"], "Pulmonologist / Sleep Specialist"),
     (["neurol", "migraine", "stroke", "epilepsy", "seizure", "parkinson", "alzheimer", "brain", "vertigo", "neuropathy"], "Neurologist"),
@@ -28,7 +29,7 @@ _KEYWORD_SPECIALTY: list[tuple[list[str], str]] = [
     (["diabetes", "thyroid", "endocrin", "hormone", "adrenal", "pituitary", "metabolic"], "Endocrinologist"),
     (["kidney", "renal", "nephr"], "Nephrologist"),
     (["joint", "arthritis", "rheumat", "orthoped", "bone", "fracture", "ligament", "tendon", "spine", "back pain", "osteoporosis"], "Orthopedic Surgeon / Rheumatologist"),
-    (["ear", "nose", "throat", "sinus", "tonsil", "laryngit", "pharyngit", "hearing", "otit", "ent"], "Otolaryngologist (ENT)"),
+    (["ear", "nose", "throat", "sinus", "tonsil", "laryngit", "pharyngit", "hearing", "otit", "ent", "nasal polyp"], "Otolaryngologist (ENT)"),
     (["allerg", "immunolog", "anaphylaxis", "hay fever", "hives"], "Allergist / Immunologist"),
     (["eye", "vision", "ophthal", "glaucoma", "cataract", "retina"], "Ophthalmologist"),
     (["urin", "bladder", "prostate", "urology", "kidney stone"], "Urologist"),
@@ -69,11 +70,13 @@ def get_nearby_doctors(
     lat: float = Query(..., ge=-90, le=90),
     lng: float = Query(..., ge=-180, le=180),
     condition: Optional[str] = Query(None),
+    risk_level: Optional[str] = Query(None),
     radius_km: float = Query(50.0, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
     """Return active doctors within radius_km, preferring matching specialty."""
     target_specialty = _condition_to_specialty(condition)
+    is_high_risk = (risk_level or "").lower() == "high"
 
     doctors = (
         db.query(User)
@@ -85,6 +88,11 @@ def get_nearby_doctors(
         )
         .all()
     )
+
+    def _is_match(specialty: str | None) -> bool:
+        if not target_specialty or not specialty:
+            return False
+        return any(p.strip().lower() in specialty.lower() for p in target_specialty.split("/"))
 
     results: list[NearbyDoctorResponse] = []
     for d in doctors:
@@ -101,15 +109,15 @@ def get_nearby_doctors(
                     longitude=d.longitude,
                     distance_km=round(dist, 2),
                     is_active=d.is_active,
+                    is_specialty_match=_is_match(d.specialty),
                 )
             )
 
-    # Sort: specialty-matching first, then by distance
     def sort_key(r: NearbyDoctorResponse):
-        specialty_match = (
-            0 if (target_specialty and r.specialty and target_specialty in r.specialty) else 1
-        )
-        return (specialty_match, r.distance_km)
+        specialty_match = 0 if r.is_specialty_match else 1
+        is_urgent = any(kw in (r.specialty or "").lower() for kw in ["urgent", "emergency", "internal medicine"])
+        urgency_boost = 0 if (is_high_risk and is_urgent) else 1
+        return (min(specialty_match, urgency_boost), r.distance_km)
 
     results.sort(key=sort_key)
     return results

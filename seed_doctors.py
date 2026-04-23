@@ -102,6 +102,12 @@ DOCTORS = [
     # General Surgery / Critical Care / Pain Management
     ("Dr. Habib Frem",         "habib.frem@gaia.lb",         "General Surgery / Critical Care / Pain Management", "+961 1 234035", 33.8828, 35.5058),
     ("Dr. Nathalie Bou Habib", "nathalie.bouhabib@gaia.lb",  "General Surgery / Critical Care / Pain Management", "+961 5 234036", 33.6914, 35.5794),
+
+    # General Practitioner / Family Medicine
+    ("Dr. Carla Mourad",       "carla.mourad@gaia.lb",       "General Practitioner / Family Medicine",            "+961 1 234037", 33.8886, 35.4947),
+    ("Dr. Walid Hammoud",      "walid.hammoud@gaia.lb",      "General Practitioner / Family Medicine",            "+961 4 234038", 34.1025, 35.6502),
+    ("Dr. Rana Turk",          "rana.turk@gaia.lb",          "General Practitioner / Family Medicine",            "+961 6 234039", 34.4389, 35.8312),
+    ("Dr. Elie Saab",          "elie.saab@gaia.lb",          "General Practitioner / Family Medicine",            "+961 7 234040", 33.5521, 35.3774),
 ]
 
 
