@@ -7,10 +7,12 @@ class Assessment(Base):
     __tablename__ = "assessments"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     age = Column(Integer, nullable=False)
     gender = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    user = relationship("User", back_populates="assessments")
     symptoms = relationship("SymptomEntry", back_populates="assessment", cascade="all, delete-orphan")
     result = relationship("PredictionResult", back_populates="assessment", uselist=False, cascade="all, delete-orphan")
 
@@ -58,6 +60,8 @@ class User(Base):
     role = Column(String, nullable=False, default="user")
     is_active = Column(Boolean, nullable=False, default=True)
     specialty = Column(String, nullable=True)
+
+    assessments = relationship("Assessment", back_populates="user")
 
 class StepRecord(Base):
     __tablename__ = "step_records"

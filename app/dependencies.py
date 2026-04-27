@@ -26,3 +26,22 @@ def get_user_from_header(
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is inactive. Please contact admin.")
     return user
+
+
+def get_optional_user(
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+
+    token = authorization.split(" ", 1)[1].strip()
+    payload = decode_token(token)
+    if not payload:
+        return None
+
+    user_id = payload.get("sub")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_active:
+        return None
+    return user

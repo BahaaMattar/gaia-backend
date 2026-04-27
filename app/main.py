@@ -40,7 +40,7 @@ from .auth import (
     RESET_CODE_TTL_SECONDS,
 )
 from .email_service import send_email
-from app.dependencies import get_user_from_header
+from app.dependencies import get_user_from_header, get_optional_user
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 import requests
@@ -234,9 +234,9 @@ def _find_or_create_google_user(
     return user
 
 @app.post("/assessments", response_model=AssessmentResponse)
-def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db)):
+def create_assessment(payload: AssessmentRequest, db: Session = Depends(get_db), current_user: User | None = Depends(get_optional_user)):
     # 1) Create assessment row
-    assessment = Assessment(age=payload.age, gender=payload.gender)
+    assessment = Assessment(age=payload.age, gender=payload.gender, user_id=current_user.id if current_user else None)
     db.add(assessment)
     db.flush()  # get assessment.id
 
