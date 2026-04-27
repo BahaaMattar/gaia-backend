@@ -96,8 +96,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create tables automatically
-Base.metadata.create_all(bind=engine)
+@app.on_event("startup")
+def create_tables():
+    Base.metadata.create_all(bind=engine)
 
 @app.get("/health")
 def health_check():
